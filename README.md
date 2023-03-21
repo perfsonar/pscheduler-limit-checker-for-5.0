@@ -19,6 +19,10 @@ problems when used with pScheduledr on perfSONAR 5.0.
  * `cd perfsonar-pscheduler-limit-checker-for-5.0-*`
 
 
+If your system is unable to reach GitHub, the tarball can be
+downloaded elsewhere, transferred to the system and unpacked manually.
+
+
 ## Checking The Limit Configuration
 
 To check the default limit configuration, run `./check-limits | less`
