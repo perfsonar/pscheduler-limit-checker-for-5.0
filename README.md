@@ -1,13 +1,43 @@
 # pScheduler Limit Configuration Checker for 5.0
 
-TODO: Write this.
+This repository contains a program that can be used to check
+pScheduler limit configurations on perfSOANR 4.0 systems for potential
+problems when used with pScheduledr on perfSONAR 5.0.
+
+
+## Installation
+
+**NOTE:** This program requires libraries provided by pScheduler and
+  must be run on an already-installed perfSONAR system.  It is
+  recommended that the system is upgraded to the latest production
+  release (4.4.6).
+
+ * Log into an existing perfSONAR 4.x system.
+ * `mkdir -p /tmp/check`
+ * `cd /tmp/check`
+ * `curl -L https://github.com/perfsonar/pscheduler-limit-checker-for-5.0/tarball/main | tar xz`
+ * `cd perfsonar-pscheduler-limit-checker-for-5.0-*`
+
+
+## Checking The Limit Configuration
+
+To check the default limit configuration, run `./check-limits | less`
+
+To check a different file, run `./check-limits /path/to/file | less`
 
 
 ## Using the Example Configuration
 
+An example limit configuration is provided to show what sorts of
+problems this program will point out.
+
 ```
 $ ./check-limits ./example.conf
+```
 
+This is the output:
+
+```
 NOTE: This limit configration could not be fully validated on a perfSONAR 5.0.0
 system.  This program will still attempt to find problems related to the removal
 of the 'test' limit.
