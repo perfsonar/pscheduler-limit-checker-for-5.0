@@ -70,16 +70,16 @@ not been customized, it can be replaced in its entirety with the following:
         "description": "Throughput tests of reasonable duration",
         "type": "jq",
         "data": {
-    	"script": [
-    	    "import \"pscheduler/iso8601\" as iso;",
-    	    "if .test.type != \"throughput\"",
-    	    "then true  # Don't care.",
-    	    "else",
-    	    "  if iso::duration_as_seconds(.test.spec.duration) > 60",
-    	    "  then \"Duration for throughput must be 60 seconds or less.\"",
-    	    "  else true end",
-    	    "end"
-    	]
+            "script": [
+                "import \"pscheduler/iso8601\" as iso;",
+                "if .test.type != \"throughput\"",
+                "then true  # Don't care.",
+                "else",
+                "  if iso::duration_as_seconds(.test.spec.duration) > 60",
+                "  then \"Duration for throughput must be 60 seconds or less.\"",
+                "  else true end",
+                "end"
+            ]
         }
     }
     
@@ -87,11 +87,33 @@ not been customized, it can be replaced in its entirety with the following:
 
 Limit 'throughput-default-udp':
 
-This limit appears to be a customization and needs to be rewritten using the
-'jq' limit.  Documentation on how to do that may be found at
-https://docs.perfsonar.net/config_pscheduler_limits.html#jq-use-a-jq-script-to-make-a-pass-fail-decision.
+This limit has been rewritten to be compatible with perfSONAR 5.0.  If yours has
+not been customized, it can be replaced in its entirety with the following:
+    
+    {
+        "name": "throughput-default-udp",
+        "description": "UDP throughput tests of reasonable bandwidth",
+        "type": "jq",
+        "data": {
+            "script": [
+                "import \"pscheduler/iso8601\" as iso;",
+                "if .test.type != \"throughput\"",
+                "then true  # Don't care.",
+                "else",
+                "   if .test.spec.udp == true",
+                "     and (.test.spec.bandwidth == null",
+                "          or.test.spec.bandwidth > 50000000)",
+                "   then",
+                "     \"UDP throughput bandwidth must be less than 50 Mb/s\"",
+                "   else true end",
+                "end"
+            ]
+        }
+    }
+    
 
 
 Note that any of the modifications described above will be fully-compatible with
-this system.  Testing them prior to  upgrading to 5.0 is strongly-recommended.
+4.4.x  Getting a revised version tested and into production prior to upgrading
+to 5.0 is strongly-recommended.
 ```

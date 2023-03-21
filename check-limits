@@ -180,24 +180,27 @@ REFERRALS = {
 """
     },
 
-    "throughput-default-time": {
+    "throughput-default-udp": {
         "replacement":
 """
 {
-    "name": "throughput-default-time",
-    "description": "Throughput tests of reasonable duration",
+    "name": "throughput-default-udp",
+    "description": "UDP throughput tests of reasonable bandwidth",
     "type": "jq",
     "data": {
-	"script": [
-	    "import \\"pscheduler/iso8601\\" as iso;",
-	    "if .test.type != \\"throughput\\"",
-	    "then true  # Don't care.",
-	    "else",
-	    "  if iso::duration_as_seconds(.test.spec.duration) > 60",
-	    "  then \\"Duration for throughput must be 60 seconds or less.\\"",
-	    "  else true end",
-	    "end"
-	]
+        "script": [
+            "import \\"pscheduler/iso8601\\" as iso;",
+            "if .test.type != \\"throughput\\"",
+            "then true  # Don't care.",
+            "else",
+            "   if .test.spec.udp == true",
+            "     and (.test.spec.bandwidth == null",
+            "          or.test.spec.bandwidth > 50000000)",
+            "   then",
+            "     \\"UDP throughput bandwidth must be less than 50 Mb/s\\"",
+            "   else true end",
+            "end"
+        ]
     }
 }
 """
@@ -239,8 +242,9 @@ if bad_limits:
 
     print(pscheduler.prefixed_wrap("",
                                    "Note that any of the modifications described above will be"
-                                   " fully-compatible with this system.  Testing them prior to "
-                                   " upgrading to 5.0 is strongly-recommended."
+                                   " fully-compatible with 4.4.x  Getting a revised version"
+                                   " tested and into production prior to upgrading to 5.0 is"
+                                   " strongly-recommended."
                                ))
 
 
