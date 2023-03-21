@@ -1,0 +1,248 @@
+#!/usr/bin/env python3
+#
+# Check a limit file for potential trouble spots with 5.0
+#
+# Usage: check-limits-for-5.0 [ FILE ]
+#
+# Where FILE is the path to the limits file to be validated or '-' for
+# standard input.  If none is provided, the system default limit file
+# will be read.
+#
+
+import hashlib
+import optparse
+import os
+import pscheduler
+import sys
+import tempfile
+
+from pscheduler.limitprocessor.limitprocessor import LimitProcessor
+
+pscheduler.set_graceful_exit()
+
+#
+# Gargle the arguments
+#
+
+class VerbatimParser(optparse.OptionParser):
+    def format_epilog(self, formatter):
+        return self.epilog
+
+opt_parser = VerbatimParser(usage="Usage: %prog [ FILE ]")
+opt_parser.disable_interspersed_args()
+
+(options, remaining_args) = opt_parser.parse_args()
+
+
+DEFAULT_LIMIT_FILE = "/etc/pscheduler/limits.conf"
+
+def get_input(mode="r"):
+
+    try:
+        if len(remaining_args) == 0:
+            if not os.path.exists(DEFAULT_LIMIT_FILE):
+                pscheduler.fail("Nothing to check: %s is not present." % DEFAULT_LIMIT_FILE)
+            infile = open(DEFAULT_LIMIT_FILE, mode)
+        elif len(remaining_args) == 1:
+            infile = open(remaining_args[0], mode)
+        else:
+            opt_parser.print_usage()
+            pscheduler.fail()
+    except IOError as ex:
+        pscheduler.fail("Unable to read input: %s" % (str(ex)))
+
+    return infile
+
+
+#
+# Check that system is at 4.4.x or later
+#
+
+if os.path.exists("/etc/redhat-release"):
+
+    stat, out, err = pscheduler.run_program(
+        ["rpm", "-q", "--queryformat", "%{VERSION}\n", "pscheduler-core"])
+    if stat != 0:
+        pscheduler.fail("Unable to find pScheduler on this system.")
+    version = out
+
+elif os.path.exists("/etc/debian/version"):
+
+    stat, out, err = pscheduler.run_program(["dpkg", "-W", "pscheduler-core"])
+    if stat != 0:
+        pscheduler.fail("Unable to find pScheduler on this system.")
+    # Output will read something like "pscheduler-core 5.0.0~b1.3~20230319025257-1"
+    try:
+        version = out.split(' ')[1]
+    except IndexError:
+        pscheduler.fail("Unable to find pScheduler on this system.")
+
+else:
+    pscheduler.fail("This operating system is not supported.")
+
+if not (version.startswith("4.4.") or version.startswith("5.")):
+    pscheduler.fail("This program doesn't work with perfSONAR %s" % (out))
+
+
+#
+# Check for the same file shipped with all versions of 4.4.x
+#
+
+
+hash_input = get_input(mode='rb')
+checksum = hashlib.sha256(hash_input.read()).hexdigest()
+if checksum == "10bc4fb31ba4bb9fdbd1624668035d76d6d6d82e12ca42c6c8fbb98cb0ace831":
+    pscheduler.succeed("NO ACTION REQUIRED.\n\n"
+                       "This limit configuration appears to be the one that shipped with perfSONAR\n"
+                       "4.x.  It will be replaced automatically with a new one upon upgrade to 5.0.\n\n")
+
+
+#
+# Check that the limit configuration is valid on the current system if it's 4.x
+#
+
+
+check_4x_input = get_input()
+try:
+    processor = LimitProcessor(check_4x_input)
+except ValueError as ex:
+    if version.startswith("4."):
+        pscheduler.fail("Limit configuration is invalid on this system:\n" + str(ex))
+    else:
+        print(pscheduler.prefixed_wrap("",
+                                       "NOTE: This limit configration could not be fully validated"
+                                       " on a perfSONAR %s system.  This program will still attempt"
+                                       " to find problems related to the removal of the 'test'"
+                                       " limit." % version))
+        print()
+
+
+#
+# Check for deprecated limits in the JSON
+#
+
+
+json = pscheduler.json_load(get_input())
+
+if "limits" not in json:
+    pscheduler.succeed("NO ACTION REQUIRED.\n\n"
+                       "This limit configuration contains no limits.\n\n")
+
+bad_limits = []
+
+for limit in json["limits"]:
+    try:
+        if limit["type"] == "test":
+            bad_limits.append(limit["name"])
+    except KeyError:
+        # Not there?  Don't care.
+        continue
+
+if not bad_limits:
+    pscheduler.succeed("NO ACTION REQUIRED.\n\n"
+                       "This limit configuration contains nothing unsuitable for 5.0.\n\n")
+
+
+print(
+    "ACTION REQUIRED.\n\n"
+    "This limit system configuration contains limits that are deprecated in\n"
+    "the 4.x family and will not be supported in release 5.0.\n"
+)
+
+
+REFERRALS = {
+
+    "idleex-default": {
+        "text": "This limit has been removed in 5.0.  The idleex test is now"
+        " disallowed for untrusted hosts by the 'allowed-tests' limit."
+    },
+
+    "throughput-default-time": {
+        "replacement":
+"""
+{
+    "name": "throughput-default-time",
+    "description": "Throughput tests of reasonable duration",
+    "type": "jq",
+    "data": {
+        "script": [
+            "import \\"pscheduler/iso8601\\" as iso;",
+            "if .test.type != \\"throughput\\"",
+            "then true  # Don't care.",
+            "else",
+            "  if iso::duration_as_seconds(.test.spec.duration) > 60",
+            "  then \\"Duration for throughput must be 60 seconds or less.\\"",
+            "  else true end",
+            "end"
+        ]
+    }
+}
+"""
+    },
+
+    "throughput-default-time": {
+        "replacement":
+"""
+{
+    "name": "throughput-default-time",
+    "description": "Throughput tests of reasonable duration",
+    "type": "jq",
+    "data": {
+	"script": [
+	    "import \\"pscheduler/iso8601\\" as iso;",
+	    "if .test.type != \\"throughput\\"",
+	    "then true  # Don't care.",
+	    "else",
+	    "  if iso::duration_as_seconds(.test.spec.duration) > 60",
+	    "  then \\"Duration for throughput must be 60 seconds or less.\\"",
+	    "  else true end",
+	    "end"
+	]
+    }
+}
+"""
+    }
+}
+
+for bad in bad_limits:
+
+    print("Limit '%s':" % bad)
+    print()
+
+    if bad not in REFERRALS:
+        print(pscheduler.prefixed_wrap("",
+                                       "This limit appears to be a customization and needs"
+                                       " to be rewritten using the 'jq' limit.  Documentation"
+                                       " on how to do that may be found at"))
+        print("https://docs.perfsonar.net/config_pscheduler_limits.html#jq-use-a-jq-script-to-make-a-pass-fail-decision.")
+        print()
+        print()
+        continue
+
+    referral = REFERRALS[bad]
+
+    if "text" in referral:
+        print(pscheduler.prefixed_wrap("", referral["text"]))
+    if "replacement" in referral:
+        print(pscheduler.prefixed_wrap("",
+                                       "This limit has been rewritten to be compatible"
+                                       " with perfSONAR 5.0.  If yours has not been customized,"
+                                       " it can be replaced in its entirety with the following:"
+                                   ))
+        for line in referral["replacement"].split("\n"):
+            print("   ", line)
+    print()
+    print()
+
+
+if bad_limits:
+
+    print(pscheduler.prefixed_wrap("",
+                                   "Note that any of the modifications described above will be"
+                                   " fully-compatible with this system.  Testing them prior to "
+                                   " upgrading to 5.0 is strongly-recommended."
+                               ))
+
+
+
+pscheduler.succeed()
