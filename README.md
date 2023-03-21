@@ -38,10 +38,6 @@ $ ./check-limits ./example.conf
 This is the output:
 
 ```
-NOTE: This limit configration could not be fully validated on a perfSONAR 5.0.0
-system.  This program will still attempt to find problems related to the removal
-of the 'test' limit.
-
 ACTION REQUIRED.
 
 This limit system configuration contains limits that are deprecated in
