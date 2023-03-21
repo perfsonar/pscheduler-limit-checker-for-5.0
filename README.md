@@ -8,11 +8,11 @@ problems when used with pScheduledr on perfSONAR 5.0.
 ## Installation
 
 **NOTE:** This program requires libraries provided by pScheduler and
-  must be run on an already-installed perfSONAR system.  It is
+  must be run on an already-installed perfSONAR 4.4.x system.  It is
   recommended that the system is upgraded to the latest production
   release (4.4.6).
 
- * Log into an existing perfSONAR 4.x system.
+ * Log into an existing perfSONAR 4.4.x system.
  * `mkdir -p /tmp/check`
  * `cd /tmp/check`
  * `curl -L https://github.com/perfsonar/pscheduler-limit-checker-for-5.0/tarball/main | tar xz`
