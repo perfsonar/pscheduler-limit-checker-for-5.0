@@ -161,7 +161,13 @@ REFERRALS = {
 
     "idleex-default": {
         "text": "This limit has been removed in 5.0.  The idleex test is now"
-        " disallowed for untrusted hosts by the 'allowed-tests' limit."
+        " disallowed for untrusted hosts by the 'allowed-tests' limit found in"
+        " the new default limit configuration shipped with the toolkit.  That"
+        " configuration can be found at"
+        " https://github.com/perfsonar/toolkit/blob/master/toolkit/perfsonar-toolkit/etc/default_service_configs/pscheduler_limits.conf."
+        "  If your limit configuration was only lightly-customized, re-customizing"
+        " the new version would be worth the effort.  Also, make sure to remove any"
+        " additional references to idleex-default elsewhere in the configuration file."
     },
 
     "throughput-default-time": {
