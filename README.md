@@ -11,6 +11,10 @@ problems when used with pScheduledr on perfSONAR 5.0.
   must be run on an already-installed perfSONAR 4.4.x system.  It is
   recommended that the system is upgraded to the latest production
   release (4.4.6).
+  
+**NOTE:** This program can be used on systems running 5.0.0 or later
+  but it will be unable to validate some older configurations.  It
+  will still make recommendations about what to change.
 
  * Log into an existing perfSONAR 4.4.x system.
  * `mkdir -p /tmp/check`
