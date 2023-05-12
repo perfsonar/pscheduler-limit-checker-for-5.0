@@ -83,6 +83,20 @@ elif os.path.exists("/etc/debian/version"):
     except IndexError:
         pscheduler.fail("Unable to find pScheduler on this system.")
 
+elif os.path.exists("/etc/debian_version"):  # Ubuntu has to be different...
+
+    stat, out, err = pscheduler.run_program(["dpkg", "-s", "pscheduler-core"])
+    if stat != 0:
+        pscheduler.fail("Unable to find pScheduler on this system.")
+    # Output will read something like "Version: 5.0.1-1"
+    version = None
+    for line in out.split('\n'):
+        if line.startswith('Version:'):
+            version = line.split(': ')[1]
+            break
+    if version is None:
+        pscheduler.fail("Unable to find pScheduler on this system.")
+
 else:
     pscheduler.fail("This operating system is not supported.")
 
